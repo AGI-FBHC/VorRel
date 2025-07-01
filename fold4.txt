@@ -1,0 +1,160 @@
+epoch1
+========== Evaluate Valid set ========== 
+Valid loss: 0.6595029731538091 
+Valid precision: 0.35733309406714614 
+Valid recall: 0.9075867453079238 
+Valid mcc: 0.17642482772306217 
+Run time: 275.1314072608948 
+
+epoch2
+========== Evaluate Valid set ========== 
+Valid loss: 0.6484174065377967 
+Valid precision: 0.36121442639274287 
+Valid recall: 0.8905490597796901 
+Valid mcc: 0.17994134236770876 
+Run time: 275.4437806606293 
+
+epoch3
+========== Evaluate Valid set ========== 
+Valid loss: 0.6470178112078724 
+Valid precision: 0.3542402159429647 
+Valid recall: 0.9309737947715898 
+Valid mcc: 0.17905098749150217 
+Run time: 276.9742798805237 
+
+epoch4
+========== Evaluate Valid set ========== 
+Valid loss: 0.6475196951038608 
+Valid precision: 0.36260592802173136 
+Valid recall: 0.8912282205986544 
+Valid mcc: 0.1842984068797929 
+Run time: 275.8954231739044 
+
+epoch5
+========== Evaluate Valid set ========== 
+Valid loss: 0.6371048790369713 
+Valid precision: 0.36350703307145776 
+Valid recall: 0.8907453620762014 
+Valid mcc: 0.18665967889183468 
+Run time: 275.484881401062 
+
+epoch6
+========== Evaluate Valid set ========== 
+Valid loss: 0.6406546649500233 
+Valid precision: 0.35950161346562837 
+Valid recall: 0.914240716255184 
+Valid mcc: 0.18649352309433492 
+Run time: 275.84745144844055 
+
+epoch7
+========== Evaluate Valid set ========== 
+Valid loss: 0.6400371465999761 
+Valid precision: 0.36661611094998786 
+Valid recall: 0.8699350622977748 
+Valid mcc: 0.18597976525024584 
+Run time: 276.1027011871338 
+
+epoch8
+========== Evaluate Valid set ========== 
+Valid loss: 0.6429995665368867 
+Valid precision: 0.37577653543583583 
+Valid recall: 0.820956511144104 
+Valid mcc: 0.18975975753798469 
+Run time: 276.4271342754364 
+
+epoch9
+========== Evaluate Valid set ========== 
+Valid loss: 0.642206795938985 
+Valid precision: 0.35885513125205887 
+Valid recall: 0.9168152095921877 
+Valid mcc: 0.1858789125238005 
+Run time: 276.24458742141724 
+
+epoch10
+========== Evaluate Valid set ========== 
+Valid loss: 0.6523825201188186 
+Valid precision: 0.37906570276903395 
+Valid recall: 0.7942278099432754 
+Valid mcc: 0.1877571808431213 
+Run time: 276.3631682395935 
+
+epoch11
+========== Evaluate Valid set ========== 
+Valid loss: 0.6419147912920656 
+Valid precision: 0.37798200714310026 
+Valid recall: 0.8269380903171072 
+Valid mcc: 0.19732297288743542 
+Run time: 276.10041093826294 
+
+epoch12
+========== Evaluate Valid set ========== 
+Valid loss: 0.6357332857169974 
+Valid precision: 0.37124031802275353 
+Valid recall: 0.8581321046765074 
+Valid mcc: 0.19321042676767355 
+Run time: 276.01574540138245 
+
+epoch13
+========== Evaluate Valid set ========== 
+Valid loss: 0.6328922602211728 
+Valid precision: 0.3637725663400165 
+Valid recall: 0.8946307937381823 
+Valid mcc: 0.18926163158429035 
+Run time: 275.5754508972168 
+
+epoch14
+========== Evaluate Valid set ========== 
+Valid loss: 0.6348051842139408 
+Valid precision: 0.3725489811758618 
+Valid recall: 0.8577417564317207 
+Valid mcc: 0.19640890260526758 
+Run time: 275.92279601097107 
+
+epoch15
+========== Evaluate Valid set ========== 
+Valid loss: 0.6345708919315651 
+Valid precision: 0.369685457771708 
+Valid recall: 0.8673086729513486 
+Valid mcc: 0.1930699846592036 
+Run time: 276.55974102020264 
+
+epoch16
+========== Evaluate Valid set ========== 
+Valid loss: 0.6324560695208798 
+Valid precision: 0.3817673849300914 
+Valid recall: 0.8219876622878468 
+Valid mcc: 0.2042638145661339 
+Run time: 276.2336094379425 
+
+epoch17
+========== Evaluate Valid set ========== 
+Valid loss: 0.631049906513626 
+Valid precision: 0.3773279973797875 
+Valid recall: 0.8318185715510589 
+Valid mcc: 0.1976701658983104 
+Run time: 276.7603769302368 
+
+epoch18
+========== Evaluate Valid set ========== 
+Valid loss: 0.6359358322631532 
+Valid precision: 0.37149177100878705 
+Valid recall: 0.867398926880779 
+Valid mcc: 0.19784441255519006 
+Run time: 275.33831906318665 
+
+epoch19
+========== Evaluate Valid set ========== 
+Valid loss: 0.632680479838003 
+Valid precision: 0.37055364251775824 
+Valid recall: 0.8617219547196036 
+Valid mcc: 0.1929474402305267 
+Run time: 275.77242946624756 
+
+epoch20
+========== Evaluate Valid set ========== 
+Valid loss: 0.6340329181631157 
+Valid precision: 0.3653149411229465 
+Valid recall: 0.8950188856347333 
+Valid mcc: 0.19382857061424053 
+Run time: 275.68777298927307 
+
