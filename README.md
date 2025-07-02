@@ -47,3 +47,5 @@ def create_feature_matrix(data, output_dir='./data/node_features'):
         file_path = os.path.join(output_dir, f'{name}.npy')
         np.save(file_path, np_matrix)
     print("success! ---create_feature_matrix()---")</pre>  
+
+&emsp;&emsp;node_features/{pdb_id}.npy是从PCA_residue_feas_PHSA.pkl 中提取，维度为len × 71,表示每个残基的节点特征向量；adjacency_matrix14/{pdb_id}.npy使用psepos_SC.pkl中的坐标构建残基间的邻接关系，若两个残基之间的欧式距离小于14Å则认为存在边
