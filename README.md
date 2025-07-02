@@ -37,4 +37,12 @@
                     adjacency_matrix[i, j] = 1
         # 保存邻接矩阵为.npy文件
         file_path = os.path.join(output_dir, f'{name}.npy')
-        np.save(file_path, adjacency_matrix)  </pre>
+        np.save(file_path, adjacency_matrix)  
+def create_feature_matrix(data, output_dir='./data/node_features'):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    for name, matrix in data.items():
+        np_matrix = np.array(matrix)
+        file_path = os.path.join(output_dir, f'{name}.npy')
+        np.save(file_path, np_matrix)
+    print("success! ---create_feature_matrix()---")</pre>  
