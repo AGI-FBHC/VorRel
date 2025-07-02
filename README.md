@@ -17,7 +17,7 @@
 **PCA_residue_feas_PHSA.pkl：** 包含每个样本的残基级别节点特征，维度为 len × 71  
 **PCA_psepos_SC.pkl：** 存储每个残基的空间坐标（经过 PCA 降维后为 len × 3）  
 &emsp;&emsp;在生成这两个文件后，根据以下代码生成模型输入的.npy文件，用于模型的训练和推理：
-<pre> ```def create_adjacency_matrix(data,  dist_threshold=14, output_dir='./data/adjacency_matrix'):
+<pre> def create_adjacency_matrix(data,  dist_threshold=14, output_dir='./data/adjacency_matrix'):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     sigma = 10
@@ -37,4 +37,4 @@
                     adjacency_matrix[i, j] = 1
         # 保存邻接矩阵为.npy文件
         file_path = os.path.join(output_dir, f'{name}.npy')
-        np.save(file_path, adjacency_matrix) ``` </pre>
+        np.save(file_path, adjacency_matrix)  </pre>
