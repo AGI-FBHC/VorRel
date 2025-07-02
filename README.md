@@ -14,5 +14,5 @@
 &emsp;&emsp;sequences 文件中保存了所有蛋白质的氨基酸序列数据，一行一个pdb_id + sequence 组合，形式为：10mh_A MIEIKDKQLTGLRFIDLFAGLGGFR...  
 &emsp;&emsp;unique文件是从no_one_msa_info.txt中提取的去重、不冗余的蛋白质列表，主要用于交叉验证或测试集划分。  
 &emsp;&emsp;在数据处理阶段，首先需要从.pdb结构文件中提取信息，根据info.txt中的信息，生成PCA_residue_feas_PHSA.pkl和PCA_psepos_SC.pkl两个文件。  
-**PCA_residue_feas_PHSA.pkl：**包含每个样本的残基级别节点特征，维度为 len × 71  
-**PCA_psepos_SC.pkl：**存储每个残基的空间坐标（经过 PCA 降维后为 len × 3）  
+** PCA_residue_feas_PHSA.pkl：** 包含每个样本的残基级别节点特征，维度为 len × 71  
+** PCA_psepos_SC.pkl：** 存储每个残基的空间坐标（经过 PCA 降维后为 len × 3）  
