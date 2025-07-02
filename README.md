@@ -16,3 +16,25 @@
 &emsp;&emsp;在数据处理阶段，首先需要从.pdb结构文件中提取信息，根据info.txt中的信息，生成PCA_residue_feas_PHSA.pkl和PCA_psepos_SC.pkl两个文件。  
 **PCA_residue_feas_PHSA.pkl：** 包含每个样本的残基级别节点特征，维度为 len × 71  
 **PCA_psepos_SC.pkl：** 存储每个残基的空间坐标（经过 PCA 降维后为 len × 3）  
+&emsp;&emsp;在生成这两个文件后，根据以下代码生成模型输入的.npy文件，用于模型的训练和推理：
+<pre> ```def create_adjacency_matrix(data,  dist_threshold=14, output_dir='./data/adjacency_matrix'):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    sigma = 10
+    for name, array in tqdm(data.items()):
+        # 将array转换为NumPy数组以便于计算
+        points = np.array(array)
+        # 初始化邻接矩阵
+        n = len(points)
+        adjacency_matrix = np.zeros((n, n), dtype=int)
+        # 计算每对点之间的距离
+        for i in range(n):
+            for j in range(n):
+                # 计算欧氏距离
+                distance = np.linalg.norm(points[i] - points[j])
+                # 设置邻接矩阵的值
+                if distance <= dist_threshold:
+                    adjacency_matrix[i, j] = 1
+        # 保存邻接矩阵为.npy文件
+        file_path = os.path.join(output_dir, f'{name}.npy')
+        np.save(file_path, adjacency_matrix) ``` </pre>
