@@ -50,4 +50,21 @@ def create_feature_matrix(data, output_dir='./data/node_features'):
 
 &emsp;&emsp;node_features/{pdb_id}.npy是从PCA_residue_feas_PHSA.pkl 中提取，维度为len × 71,表示每个残基的节点特征向量，adjacency_matrix14/{pdb_id}.npy使用psepos_SC.pkl中的坐标构建残基间的邻接关系，若两个残基之间的欧式距离小于14Å则认为存在边。再利用create_label_matrix(data,key)、create_label_matrix_more(data, key)两个函数生成训练和测试所需要的pkl文件。
 
-# 二、训练模型
+# 二、训练模型  
+&emsp;&emsp;此项目使用GraphPLBR模型，这是一种是一个基于PyTorch的深度图卷积神经网络 (deepGCN) 模型，模型输入蛋白质的结构信息（邻接矩阵）、节点特征和残基空间位置。以下是模型输入数据和输出数据：
+| 输入项                | 形状        | 描述                                  |
+| ------------------ | --------- | ----------------------------------- |
+| `sequence_name`    | -         | 蛋白质序列的唯一 ID，对应数据文件名                 |
+| `sequence`         | `L`       | 蛋白质氨基酸序列，长度为残基数 L                   |
+| `label`            | `[L]`     | 每个残基是否为结合位点（0: 非结合, 1: 结合）          |
+| `node_features`    | `[L, 71]` | 每个残基的 71 维生化特征（如氨基酸类型、理化性质等）        |
+| `adjacency_matrix` | `[L, L]`  | 蛋白质残基邻接矩阵，表示残基之间是否有空间接触（1: 有, 0: 无） |
+| `residue_pos`      | `[L, 3]`  | 每个残基的 3D 坐标 (PCA 降维后)               |  
+
+| 输出项           | 形状       | 描述                          |
+| ------------- | -------- | --------------------------- |
+| `output`      | `[L, 2]` | 每个残基属于“非结合(0)”或“结合(1)”的概率分布 |
+| `pred_labels` | `[L]`    | 概率最大类别作为预测标签（0 或 1）         |  
+
+
+
