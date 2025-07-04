@@ -93,171 +93,37 @@ def create_feature_matrix(data, output_dir='./data/node_features'):
 
 ![描述文字](images/result.png)
 
-&emsp;&emsp;在测试集上的结果如下： 
+&emsp;&emsp;在测试集上的结果保存在records的test.txt中，部分结果如下： 
 
 ========== fold1 Evaluate Test set ==========
-Test loss: 0.6346375336108738 
-Test binary acc: 0.4982545633471602 
-Test precision: 0.376230958956979 
-Test recall: 0.8648350334507561 
-Test f1: 0.5243519941167973 
-Test AUC: 0.6564880362233527 
-Test AUPRC: 0.4601339002487719 
-Test mcc: 0.20160328504648167 
-Threshold: 0.5 
+Test loss: 0.6346375336108738   
+Test binary acc: 0.4982545633471602   
+Test precision: 0.376230958956979   
+Test recall: 0.8648350334507561   
+Test f1: 0.5243519941167973   
+Test AUC: 0.6564880362233527   
+Test AUPRC: 0.4601339002487719   
+Test mcc: 0.20160328504648167   
+Threshold: 0.5     
 
-========== fold1 Evaluate Test set ========== 
-Test loss: 0.6524382524214879 
-Test binary acc: 0.5246533230343335 
-Test precision: 0.3841453852769263 
-Test recall: 0.8064898452133623 
-Test f1: 0.5204101884064696 
-Test AUC: 0.6474860376294667 
-Test AUPRC: 0.4476777868220984 
-Test mcc: 0.1972402465258116 
-Threshold: 0.55 
+========== fold1 Evaluate Test set ==========   
+Test loss: 0.6524382524214879   
+Test binary acc: 0.5246533230343335   
+Test precision: 0.3841453852769263   
+Test recall: 0.8064898452133623   
+Test f1: 0.5204101884064696   
+Test AUC: 0.6474860376294667   
+Test AUPRC: 0.4476777868220984   
+Test mcc: 0.1972402465258116   
+Threshold: 0.55   
 
-========== fold1 Evaluate Test set ========== 
-Test loss: 0.656280047683672 
-Test binary acc: 0.44521988623077663 
-Test precision: 0.35833972438746087 
-Test recall: 0.9294354524299232 
-Test f1: 0.5172543311213447 
-Test AUC: 0.6414691210554139 
-Test AUPRC: 0.4383809805582487 
-Test mcc: 0.1822953334380286 
-Threshold: 0.5 
-
-========== fold2 Evaluate Test set ========== 
-Test loss: 0.6438532297032592 
-Test binary acc: 0.5052734351190721 
-Test precision: 0.3785302778822988 
-Test recall: 0.8523921492522314 
-Test f1: 0.524251130710568 
-Test AUC: 0.6545994634315014 
-Test AUPRC: 0.456772228077122 
-Test mcc: 0.20203460749574498 
-Threshold: 0.55 
-
-========== fold2 Evaluate Test set ========== 
-Test loss: 0.6583135669905679 
-Test binary acc: 0.4463258835511158 
-Test precision: 0.3587312445781971 
-Test recall: 0.9286383870168441 
-Test f1: 0.5175383917125564 
-Test AUC: 0.6429915500993768 
-Test AUPRC: 0.44130672115231573 
-Test mcc: 0.18310183532768398 
-Threshold: 0.5 
-
-========== fold2 Evaluate Test set ========== 
-Test loss: 0.6553079032361774 
-Test binary acc: 0.44212409112620005 
-Test precision: 0.3572045273427816 
-Test recall: 0.9312340478620453 
-Test f1: 0.5163474989239377 
-Test AUC: 0.6429767425897589 
-Test AUPRC: 0.4417560572048392 
-Test mcc: 0.1796302056861857 
-Threshold: 0.5 
-
-========== fold3 Evaluate Test set ========== 
-Test loss: 0.632002423223936 
-Test binary acc: 0.5331649587245789 
-Test precision: 0.38875731360626287 
-Test recall: 0.8035008499143155 
-Test f1: 0.5239919363951528 
-Test AUC: 0.6581388651232727 
-Test AUPRC: 0.4620082690339676 
-Test mcc: 0.20647779936936234 
-Threshold: 0.45 
-
-========== fold3 Evaluate Test set ========== 
-Test loss: 0.632002423223936 
-Test binary acc: 0.5331649587245789 
-Test precision: 0.38875731360626287 
-Test recall: 0.8035008499143155 
-Test f1: 0.5239919363951528 
-Test AUC: 0.6581388651232727 
-Test AUPRC: 0.4620082690339676 
-Test mcc: 0.20647779936936234 
-Threshold: 0.45 
-
-========== fold3 Evaluate Test set ========== 
-Test loss: 0.6464865545914791 
-Test binary acc: 0.45452389475072397 
-Test precision: 0.36139693696918795 
-Test recall: 0.9201097870968972 
-Test f1: 0.518959210260129 
-Test AUC: 0.6433003333566328 
-Test AUPRC: 0.44146681250349573 
-Test mcc: 0.1867515030909337 
-Threshold: 0.5 
-
-========== fold4 Evaluate Test set ========== 
-Test loss: 0.6378029439117652 
-Test binary acc: 0.5209214132384998 
-Test precision: 0.3837573501047675 
-Test recall: 0.8222492146306555 
-Test f1: 0.5232876651904653 
-Test AUC: 0.6551365915931925 
-Test AUPRC: 0.45825348249583087 
-Test mcc: 0.20235508624321963 
-Threshold: 0.5 
-
-========== fold4 Evaluate Test set ========== 
-Test loss: 0.6378029439117652 
-Test binary acc: 0.5209214132384998 
-Test precision: 0.3837573501047675 
-Test recall: 0.8222492146306555 
-Test f1: 0.5232876651904653 
-Test AUC: 0.6551365915931925 
-Test AUPRC: 0.45825348249583087 
-Test mcc: 0.20235508624321963 
-Threshold: 0.5 
-
-========== fold4 Evaluate Test set ========== 
-Test loss: 0.6495134978130839 
-Test binary acc: 0.44047783960379144 
-Test precision: 0.3564655143814484 
-Test recall: 0.9309152216968136 
-Test f1: 0.5155260818311665 
-Test AUC: 0.6374506163826875 
-Test AUPRC: 0.43033943478146547 
-Test mcc: 0.1770040864806746 
-Threshold: 0.45 
-
-========== fold5 Evaluate Test set ========== 
-Test loss: 0.6399567297508921 
-Test binary acc: 0.4969839962852675 
-Test precision: 0.3757020629430298 
-Test recall: 0.8659491922781689 
-Test f1: 0.5240423131288982 
-Test AUC: 0.6533391637034913 
-Test AUPRC: 0.4547955458716553 
-Test mcc: 0.20073626593050764 
-Threshold: 0.5 
-
-========== fold5 Evaluate Test set ========== 
-Test loss: 0.6441327565980839 
-Test binary acc: 0.5210300181857876 
-Test precision: 0.38234949632120774 
-Test recall: 0.8088775759508038 
-Test f1: 0.5192526948878609 
-Test AUC: 0.6457987714499513 
-Test AUPRC: 0.44611703758460447 
-Test mcc: 0.19399681371121824 
-Threshold: 0.5 
-
-========== fold5 Evaluate Test set ========== 
-Test loss: 0.6532615043584867 
-Test binary acc: 0.4261519604855306 
-Test precision: 0.3526261858753074 
-Test recall: 0.9504935740932948 
-Test f1: 0.5144100090072813 
-Test AUC: 0.6322286714926318 
-Test AUPRC: 0.41875439887460114 
-Test mcc: 0.17596748052367112 
-Threshold: 0.45 
-
-
+========== fold1 Evaluate Test set ==========   
+Test loss: 0.656280047683672   
+Test binary acc: 0.44521988623077663   
+Test precision: 0.35833972438746087   
+Test recall: 0.9294354524299232   
+Test f1: 0.5172543311213447   
+Test AUC: 0.6414691210554139   
+Test AUPRC: 0.4383809805582487   
+Test mcc: 0.1822953334380286   
+Threshold: 0.5   
