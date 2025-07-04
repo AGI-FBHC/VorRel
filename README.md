@@ -90,8 +90,7 @@ def create_feature_matrix(data, output_dir='./data/node_features'):
 
 # 三、训练结果  
 &emsp;&emsp;训练过程使用KFold将数据集分成5份（train/valid/test）。每轮保存最优模型，记录最佳 epoch 和指标。将每轮Fold的结果记录在records文件夹下。训练过程的结果画出图像如下：
-
-
+![描述文字](images/result.png)
 
 
 
