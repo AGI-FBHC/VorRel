@@ -76,6 +76,7 @@ def load_graph(sequence_name):
 
     fpath = './data/scPDB/adjacency_matrix14/' + sequence_name + '.npy'
     adjacency_matrix = np.load(fpath)
+
     norm_matrix = normalize(adjacency_matrix.astype(np.float32))
 
     return norm_matrix
@@ -84,6 +85,18 @@ def get_node_features(sequence_name):
 
     fpath = './data/scPDB/node_features/' + sequence_name + '.npy'
     node_features = np.load(fpath)
+
+    # pssm_path = './data/node_features/pssm/' + sequence_name + '.npy'
+    # blosum_path = './data/node_features/blosum/' + sequence_name + '.npy'
+    # aaphy_path = './data/node_features/AAPHY/' + sequence_name + '.npy'
+    # psp_path = './data/node_features/psp/' + sequence_name + '.npy'
+    #
+    # pssm = np.load(pssm_path)
+    # blosum = np.load(blosum_path)
+    # aaphy = np.load(aaphy_path)
+    # psp = np.load(psp_path)
+    #
+    # node_features = np.concatenate([pssm, blosum, psp, aaphy], axis=1)
 
     return node_features
 
@@ -108,20 +121,13 @@ class ProDataset(Dataset):
     def __getitem__(self,index):
 
         sequence_name = self.names[index]
-        # print(1)
         sequence = self.sequences[index]
-        # print(2)
         label = np.array(self.labels[index])
-        # print(3)
 
-        try:
-            node_features = get_node_features(sequence_name)
-            # print(4)
-            graph = load_graph(sequence_name)
-            # print(5)
-        except Exception as e:
-            print(f"[ERROR] Loading failed for {sequence_name}: {e}")
-            raise e
+
+        node_features = get_node_features(sequence_name)
+        graph = load_graph(sequence_name)
+
 
         return sequence_name,sequence,label,node_features,graph
 

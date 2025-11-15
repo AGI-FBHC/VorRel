@@ -1,7 +1,7 @@
 """
 # -*- coding: utf-8 -*-
 # @Author : Sun JJ
-# @File : train1.py
+# @File : train.py
 # @Time : 2022/5/9 11:09
 # code is far away from bugs with the god animal protecting
 #         ┌─┐       ┌─┐
@@ -31,9 +31,7 @@ import os
 import pickle
 from time import *
 import pandas as pd
-from torch.utils.data import default_collate
-
-from Model1 import *
+from model import *
 from sklearn import metrics
 from torch.autograd import Variable
 from sklearn.model_selection import KFold
@@ -41,6 +39,9 @@ from tqdm import tqdm
 import warnings
 from tensorboardX import SummaryWriter
 from datetime import datetime
+# from egnn.models.egnn_clean.egnn_clean import EGNN
+
+
 parameters = {
     'INPUT_DIM': INPUT_DIM,
     'HIDDEN_DIM': HIDDEN_DIM,
@@ -56,7 +57,6 @@ warnings.filterwarnings('ignore')
 Model_Path = './Model/'
 
 # 训练一个批次，更新参数权重
-# 训练一个批次，更新参数权重
 def train_one_epoch(model,data_loader):
 
     epoch_loss_train = 0.0
@@ -69,24 +69,26 @@ def train_one_epoch(model,data_loader):
     for data in data_loader:
 
         model.optimizer.zero_grad()
-        sequence_names,seq,labels,node_features,graphs = data
+        # _,_,labels,node_features,graphs = data
+        sequence_names,_,labels,node_features,edge_index, pos = data
 
         if torch.cuda.is_available():
+            pos = Variable(pos.cuda())
             node_features = Variable(node_features.cuda())
-            graphs = Variable(graphs.cuda())
+            #graphs = Variable(graphs.cuda())
             y_true = Variable(labels.cuda())
-
+            #edge_index = Variable(edge_index.cuda())
         else:
             node_features = Variable(node_features)
             graphs = Variable(graphs)
             y_true = Variable(labels)
 
         node_features = torch.squeeze(node_features)
-        graphs = torch.squeeze(graphs)
+        # graphs = torch.squeeze(graphs)
         y_true = torch.squeeze(y_true)
 
-        y_pred = model(node_features, graphs)
-        # y_pred = model(node_features, pos, edge_index, None)
+        # y_pred = model(node_features, graphs)
+        y_pred = model(node_features, pos, edge_index, None)
 
         y_true = torch.tensor(y_true, dtype=torch.long)    # calculate loss
         loss = model.criterion(y_pred, y_true)
@@ -124,28 +126,28 @@ def evaluate(model,data_loader):
     for data in data_loader:
 
         with torch.no_grad():
-            sequence_names,seq,labels,node_features,graphs = data
-            # sequence_names,_,labels,node_features,edge_index, pos = data
+            # sequence_names,_,labels,node_features,graphs = data
+            sequence_names,_,labels,node_features,edge_index, pos = data
 
             if torch.cuda.is_available():
 
-                # pos = Variable(pos.cuda())
+                pos = Variable(pos.cuda())
                 node_features = Variable(node_features.cuda())
-                graphs = Variable(graphs.cuda())
+                #graphs = Variable(graphs.cuda())
                 y_true = Variable(labels.cuda())
-                # edge_index = Variable(edge_index.cuda())
+                #edge_index = Variable(edge_index.cuda())
             else:
                 node_features = Variable(node_features)
                 graphs = Variable(graphs)
                 y_true = Variable(labels)
 
             node_features = torch.squeeze(node_features)
-            graphs = torch.squeeze(graphs)
+            #graphs = torch.squeeze(graphs)
 
             y_true = torch.squeeze(y_true)
 
-            y_pred = model(node_features,graphs)
-            # y_pred = model(node_features, pos, edge_index, None)
+            # y_pred = model(node_features,graphs)
+            y_pred = model(node_features, pos, edge_index, None)
 
 
 
@@ -173,9 +175,9 @@ def analysis(y_true,y_pred,best_threshold = None):
         best_f1 = 0
         best_threshold = 0
 
-        for threshold in range(0,20):
+        for threshold in range(0,100):
 
-            threshold = threshold / 20
+            threshold = threshold / 100
             binary_pred = [1 if pred >= threshold else 0 for pred in y_pred]
             binary_true = y_true
             f1 = metrics.f1_score(binary_true,binary_pred)
@@ -205,16 +207,12 @@ def analysis(y_true,y_pred,best_threshold = None):
 
     return results
 
-def collate_fn(batch):
-    batch = [b for b in batch if b is not None]
-    return default_collate(batch)
-
 # 训练模型，更新并保存最佳模型
 def train(model,train_dataframe,valid_dataframe,test_dataframe,fold = 0):
 
-    train_loader = DataLoader(dataset = ProDataset(train_dataframe),batch_size = BATCH_SIZE,shuffle = True,num_workers = 4,collate_fn=collate_fn)
-    valid_loader = DataLoader(dataset = ProDataset(valid_dataframe),batch_size = BATCH_SIZE,shuffle = True,num_workers = 4,collate_fn=collate_fn)
-    test_loader = DataLoader(dataset = ProDataset(test_dataframe),batch_size = BATCH_SIZE,shuffle = True,num_workers = 4,collate_fn=collate_fn)
+    train_loader = DataLoader(dataset = ProDataset_agat(train_dataframe),batch_size = BATCH_SIZE,shuffle = True,num_workers = 2)
+    valid_loader = DataLoader(dataset = ProDataset_agat(valid_dataframe),batch_size = BATCH_SIZE,shuffle = True,num_workers = 2)
+    test_loader = DataLoader(dataset = ProDataset_agat(test_dataframe),batch_size = BATCH_SIZE,shuffle = True,num_workers = 2)
     best_epoch = 0
     best_val_recall = 0
     best_val_precision = 0
@@ -336,7 +334,7 @@ def cross_validation(all_dataframe,test_dataframe,fold_number = 5):
 
         if torch.cuda.is_available():
             model.cuda()
-        
+
         best_epoch,valid_recall = train(model,train_dataframe,valid_dataframe,test_dataframe,fold + 1)
         best_epochs.append(str(best_epoch))
         valid_recalls.append(valid_recall)
@@ -352,9 +350,9 @@ def cross_validation(all_dataframe,test_dataframe,fold_number = 5):
 
 def main():
     # 用更多的标签
-    with open('./data/train_data_more.pkl', "rb") as f:
+    with open('./data/train_data.pkl', "rb") as f:
         data_all = pickle.load(f)
-    
+
     IDs, sequences, labels = [], [], []
 
     for ID in data_all:
@@ -366,7 +364,7 @@ def main():
     train_dic = {"ID": IDs, "sequence": sequences, "label": labels}
     train_dataframe = pd.DataFrame(train_dic)
 
-    with open('./data/test_data_more.pkl', "rb") as f:
+    with open('./data/test_data.pkl', "rb") as f:
         data_test = pickle.load(f)
     IDs, sequences, labels = [], [], []
     for ID in data_test:

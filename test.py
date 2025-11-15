@@ -32,7 +32,7 @@ import pickle
 import pandas as pd
 from torch.utils.data import DataLoader
 
-from Model1 import *
+from model import *
 from sklearn import metrics
 from torch.autograd import Variable
 import warnings
