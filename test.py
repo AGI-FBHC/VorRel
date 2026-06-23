@@ -1,217 +1,342 @@
-"""
-# -*- coding: utf-8 -*-
-# @Author : Sun JJ
-# @File : test.py
-# @Time : 2022/5/9 18:25
-# code is far away from bugs with the god animal protecting
-#         ┌─┐       ┌─┐
-#      ┌──┘ ┴───────┘ ┴──┐
-#      │                 │
-#      │       ───       │
-#      │  ─┬┘       └┬─  │
-#      │                 │
-#      │       ─┴─       │
-#      │                 │
-#      └───┐         ┌───┘
-#          │         │
-#          │         │
-#          │         │
-#          │         └──────────────┐
-#          │                        │
-#          │                        ├─┐
-#          │                        ┌─┘
-#          │                        │
-#          └─┐  ┐  ┌───────┬──┐  ┌──┘
-#            │ ─┤ ─┤       │ ─┤ ─┤
-#            └──┴──┘       └──┴──┘
-"""
-
-
 import os
-import pickle
-import pandas as pd
-from torch.utils.data import DataLoader
+import sys
+import time
+import numpy as np
+import torch
 
-from model import *
-from sklearn import metrics
-from torch.autograd import Variable
-import warnings
-warnings.filterwarnings('ignore')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from models import MVFEM, VMGCM, ARFEM, create_vorrel_net
 
-
-Model_path = './Model/'
-Dataset_path = './data/'
+FEATURE_DIR = '/home/shihj/shj/VorRel/feature'
+PDB_DIR = '/home/shihj/shj/GraphPRNet/data/scPDB/pdb_files'
+TEST_PROTEINS = ['10mh_A_1', '11bg_A_2', '11bg_B_2']
 
 
-def evaluate(model, data_loader):
+def load_precomputed_features(key):
+    pssm = np.load(os.path.join(FEATURE_DIR, 'PSSM', f'{key}.npy'))
+    esm2 = np.load(os.path.join(FEATURE_DIR, 'ESM-2', f'{key}.npy'))
+    dssp = np.load(os.path.join(FEATURE_DIR, 'DSSP', f'{key}.npy'))
+    atomic = np.load(os.path.join(FEATURE_DIR, 'Atomic', f'{key}.npy'))
+    graph = np.load(os.path.join(FEATURE_DIR, 'Graph', f'{key}.npy'), allow_pickle=True).item()
+    return pssm, esm2, dssp, atomic, graph
 
-    model.eval()
 
-    epoch_loss = 0.0
-    n = 0
-    valid_pred = []
-    valid_true = []
-    pred_dict = {}
+def get_sequence_from_info(key):
+    pdb_id, chain_id, struct_num = key.split('_')
+    info_path = '/home/shihj/shj/GraphPRNet/data/scPDB/info.txt'
+    with open(info_path) as f:
+        for line in f:
+            if line.startswith(f'{pdb_id}\t{struct_num}\t{chain_id}\t'):
+                return line.strip().split('\t')[3]
+    return None
 
-    for data in data_loader:
 
-        with torch.no_grad():
-            sequence_names, seq, labels, node_features, adj = data
+def test_step1_load_features():
+    print("=" * 60)
+    print("Step 1: 加载预计算特征")
+    print("=" * 60)
 
-            if torch.cuda.is_available():
-                node_features = Variable(node_features.cuda())
-                adj = Variable(adj.cuda())
-                y_true = Variable(labels.cuda())
-            else:
-                node_features = Variable(node_features)
-                adj = Variable(adj)
-                y_true = Variable(labels)
+    for key in TEST_PROTEINS:
+        pssm, esm2, dssp, atomic, graph = load_precomputed_features(key)
+        n_feat = pssm.shape[0]
+        n_graph = graph['voronoi_edges'].shape[0]
+        match = "✓" if n_feat == n_graph else "✗ (维度不匹配)"
 
-            node_features = torch.squeeze(node_features)
-            adj = torch.squeeze(adj)
-            y_true = torch.squeeze(y_true)
+        print(f"\n  {key}:")
+        print(f"    PSSM:   {pssm.shape}")
+        print(f"    ESM-2:  {esm2.shape}")
+        print(f"    DSSP:   {dssp.shape}")
+        print(f"    Atomic: {atomic.shape}")
+        print(f"    Graph:  voronoi={graph['voronoi_edges'].shape}")
+        print(f"    特征-图维度一致: {match}")
 
-            y_pred = model(node_features, adj)
-            y_true = torch.tensor(y_true, dtype=torch.long)
-            loss = model.criterion(y_pred, y_true)
-            softmax = torch.nn.Softmax(dim=1)
-            y_pred = softmax(y_pred)
-            y_pred = y_pred.cpu().detach().numpy()
-            y_true = y_true.cpu().detach().numpy()
-            valid_pred += [pred[1] for pred in y_pred]
-            valid_true += list(y_true)
-            pred_dict[sequence_names[0]] = [pred[1] for pred in y_pred]
+        if n_feat != n_graph:
+            return None
 
-            epoch_loss += loss.item()
-            n += 1
+    print(f"\n  Step 1 通过 ✓")
+    return TEST_PROTEINS[0]
 
-    epoch_loss_avg = epoch_loss / n
 
-    return epoch_loss_avg, valid_true, valid_pred, pred_dict
+def test_step2_embedding(key):
+    print("\n" + "=" * 60)
+    print("Step 2: 特征拼接 + Embedding 层")
+    print("=" * 60)
 
-def analysis(y_true, y_pred, best_threshold = None):
+    pssm, esm2, dssp, atomic, graph = load_precomputed_features(key)
+    n = pssm.shape[0]
 
-    if best_threshold == None:
-        best_f1 = 0
-        best_threshold = 0
-        for threshold in range(0, 20):
-
-            threshold = threshold / 20
-            binary_pred = [1 if pred >= threshold else 0 for pred in y_pred]
-            binary_true = y_true
-            f1 = metrics.f1_score(binary_true, binary_pred)
-            if f1 > best_f1:
-                best_f1 = f1
-                best_threshold = threshold
-
-    binary_pred = [1 if pred >= best_threshold else 0 for pred in y_pred]
-
-    binary_true = y_true
-
-    # binary evaluate
-    binary_acc = metrics.accuracy_score(binary_true, binary_pred)
-    precision = metrics.precision_score(binary_true, binary_pred)
-    recall = metrics.recall_score(binary_true, binary_pred)
-    f1 = metrics.f1_score(binary_true, binary_pred)
-    AUC = metrics.roc_auc_score(binary_true, y_pred)
-    precisions, recalls, thresholds = metrics.precision_recall_curve(binary_true, y_pred)
-    AUPRC = metrics.auc(recalls, precisions)
-    mcc = metrics.matthews_corrcoef(binary_true, binary_pred)
-
-    results = {
-        'binary_acc': binary_acc,
-        'precision': precision,
-        'recall': recall,
-        'f1': f1,
-        'AUC': AUC,
-        'AUPRC': AUPRC,
-        'mcc': mcc,
-        'threshold': best_threshold
+    config = {
+        'model': {'hidden_dim': 256, 'gcnii_layers': 6, 'alpha': 0.5, 'beta': 1.3, 'dropout': 0.1}
     }
 
-    return results
+    mvfem = MVFEM(config)
+    mvfem.eval()
 
-def filter_missing_samples(df):
-    valid_rows = []
-    for _, row in df.iterrows():
-        sid = row["ID"]
-        adj_path = f"./data/scPDB/adjacency_matrix14/{sid}.npy"
-        feat_path = f"./data/scPDB/node_features/{sid}.npy"
-        if os.path.exists(adj_path) and os.path.exists(feat_path):
-            valid_rows.append(row)
-        else:
-            print(f"跳过缺失样本: {sid}")
-    return pd.DataFrame(valid_rows)
+    device = next(mvfem.parameters()).device
 
-def test(test_dataframe):
-    test_dataframe = filter_missing_samples(test_dataframe)
-    test_loader = DataLoader(dataset=ProDataset(test_dataframe), batch_size=1, shuffle=True, num_workers=4)
+    concatenated = np.concatenate([esm2, pssm, dssp, atomic], axis=1)
+    print(f"  拼接后特征: {concatenated.shape} (1280+20+13+7={1280+20+13+7})")
 
-    for model_name in sorted(os.listdir(Model_path)):
-        print(model_name)
-        model = GraphPLBR(LAYER, INPUT_DIM, HIDDEN_DIM, NUM_CLASSES, DROPOUT, LAMBDA, ALPHA, VARIANT)
-        if torch.cuda.is_available():
-            model.cuda()
-        model.load_state_dict(torch.load(Model_path + model_name, map_location='cuda:0'),strict=False)
+    concat_tensor = torch.tensor(concatenated, dtype=torch.float32).to(device)
 
-        epoch_loss_test_avg, test_true, test_pred, pred_dict = evaluate(model, test_loader)
+    with torch.no_grad():
+        h_initial = mvfem.embedding_layer(concat_tensor)
+        if h_initial.dim() == 2:
+            h_initial = h_initial.unsqueeze(0)
 
-        result_test = analysis(test_true, test_pred)
+    print(f"  Embedding 输出: {h_initial.shape}")
+    print(f"  Step 2 通过 ✓")
 
-        print("========== Evaluate Test set ==========")
-        print("Test loss: ", epoch_loss_test_avg)
-        print("Test binary acc: ", result_test['binary_acc'])
-        print("Test precision:", result_test['precision'])
-        print("Test recall: ", result_test['recall'])
-        print("Test f1: ", result_test['f1'])
-        print("Test AUC: ", result_test['AUC'])
-        print("Test AUPRC: ", result_test['AUPRC'])
-        print("Test mcc: ", result_test['mcc'])
-        print("Threshold: ", result_test['threshold'])
-        print()
+    return h_initial, graph
 
-        with open('./records/test.txt', 'a') as f:
-            f.write("========== {} Evaluate Test set ========== \n".format(model_name[:5].lower()))
-            f.write("Test loss: {} \n".format(epoch_loss_test_avg))
-            f.write("Test binary acc: {} \n".format(result_test['binary_acc']))
-            f.write("Test precision: {} \n".format(result_test['precision']))
-            f.write("Test recall: {} \n".format(result_test['recall']))
-            f.write("Test f1: {} \n".format(result_test['f1']))
-            f.write("Test AUC: {} \n".format(result_test['AUC']))
-            f.write("Test AUPRC: {} \n".format(result_test['AUPRC']))
-            f.write("Test mcc: {} \n".format(result_test['mcc']))
-            f.write("Threshold: {} \n".format(result_test['threshold']))
-            f.write('\n')
 
-def test_one_dataset(dataset):
-    IDs, sequences, labels = [], [], []
-    for ID in dataset:
-        IDs.append(ID)
-        item = dataset[ID]
-        sequences.append(item[0])
-        labels.append(item[1])
-    test_dic = {"ID": IDs, "sequence": sequences, "label": labels}
-    test_dataframe = pd.DataFrame(test_dic)
-    print("test_dataframe:",test_dataframe)
-    test(test_dataframe)
+def test_step3_graph_construction(key):
+    print("\n" + "=" * 60)
+    print("Step 3: 图结构构建 (VMGCM)")
+    print("=" * 60)
+
+    pssm, esm2, dssp, atomic, graph = load_precomputed_features(key)
+
+    pdb_id = key.split('_')[0]
+    chain_id = key.split('_')[1]
+    pdb_path = os.path.join(PDB_DIR, f'{pdb_id}.pdb')
+    sequence = get_sequence_from_info(key)
+
+    config = {
+        'graph': {
+            'hydrogen_bond_threshold': 6.0,
+            'hydrophobic_threshold': 8.0,
+            'salt_bridge_threshold': 12.0
+        }
+    }
+
+    vmgcm = VMGCM(config)
+    vmgcm.eval()
+
+    residue_types = list(sequence) if sequence else None
+
+    coords_tensor = torch.tensor(pssm[:, :3], dtype=torch.float32)
+    if coords_tensor.shape[1] != 3:
+        from scripts.extract_edge_matrices import extract_residue_coords_and_types
+        coords_np, _, _ = extract_residue_coords_and_types(pdb_path, chain_id)
+        coords_tensor = torch.tensor(coords_np, dtype=torch.float32)
+
+    with torch.no_grad():
+        raw_edges, processed_edges = vmgcm(
+            residue_coords=coords_tensor,
+            residue_types=residue_types,
+            sequence=sequence
+        )
+
+    print(f"  raw_edges keys: {list(raw_edges.keys())}")
+    for k, v in raw_edges.items():
+        print(f"    {k}: {v.shape}")
+    print(f"  processed_edges keys: {list(processed_edges.keys())}")
+    for k, v in processed_edges.items():
+        print(f"    {k}: {v.shape}")
+
+    print(f"\n  预计算图 vs VMGCM 实时构建:")
+    for edge_type in ['voronoi', 'hydrogen_bond', 'hydrophobic', 'salt_bridge']:
+        precomputed_key = {'voronoi': 'voronoi_edges', 'hydrogen_bond': 'hb_edges',
+                          'hydrophobic': 'hp_edges', 'salt_bridge': 'sb_edges'}[edge_type]
+        precomputed = graph[precomputed_key]
+        live = raw_edges[edge_type].squeeze(0).cpu().numpy()
+        n_pre = (precomputed > 0).sum() // 2
+        n_live = (live > 0).sum() // 2
+        print(f"    {edge_type}: 预计算={n_pre}边, 实时={n_live}边")
+
+    print(f"  Step 3 通过 ✓")
+    return raw_edges, processed_edges
+
+
+def test_step4_arfem(h_initial, raw_edges, processed_edges):
+    print("\n" + "=" * 60)
+    print("Step 4: 自适应关系特征增强 (ARFEM)")
+    print("=" * 60)
+
+    config = {
+        'model': {
+            'hidden_dim': 256,
+            'gcnii_layers': 6,
+            'alpha': 0.5,
+            'beta': 1.3,
+            'dropout': 0.1,
+        }
+    }
+
+    arfem = ARFEM(config)
+    arfem.eval()
+
+    device = next(arfem.parameters()).device
+    h_initial = h_initial.to(device)
+    edge_features = (raw_edges, processed_edges)
+
+    with torch.no_grad():
+        predictions = arfem(
+            h_initial=h_initial,
+            edge_features_dict=edge_features,
+            return_features=False
+        )
+
+    print(f"  输入: h_initial={h_initial.shape}")
+    print(f"  输出: predictions={predictions.shape}")
+    print(f"  预测范围: [{predictions.min().item():.4f}, {predictions.max().item():.4f}]")
+    print(f"  Step 4 通过 ✓")
+
+    return predictions
+
+
+def test_step5_loss(predictions, binding_labels):
+    print("\n" + "=" * 60)
+    print("Step 5: 损失计算")
+    print("=" * 60)
+
+    config = {'model': {'pos_weight': 10.0}}
+    model = create_vorrel_net(config)
+
+    targets = torch.tensor(binding_labels, dtype=torch.float32).unsqueeze(0)
+
+    loss = model.compute_loss(predictions, targets)
+
+    print(f"  predictions: {predictions.shape}")
+    print(f"  targets: {targets.shape}")
+    print(f"  正样本数: {int(binding_labels.sum())}")
+    print(f"  Loss: {loss.item():.4f}")
+    print(f"  Step 5 通过 ✓")
+
+    return loss
+
+
+def test_step6_full_pipeline(key):
+    print("\n" + "=" * 60)
+    print("Step 6: 完整端到端前向传播 (预计算特征 + 模型)")
+    print("=" * 60)
+
+    pssm, esm2, dssp, atomic, graph = load_precomputed_features(key)
+    n = pssm.shape[0]
+
+    pdb_id = key.split('_')[0]
+    chain_id = key.split('_')[1]
+    pdb_path = os.path.join(PDB_DIR, f'{pdb_id}.pdb')
+    sequence = get_sequence_from_info(key)
+
+    from scripts.extract_edge_matrices import extract_residue_coords_and_types
+    coords_np, _, _ = extract_residue_coords_and_types(pdb_path, chain_id)
+    if coords_np is None:
+        print(f"  无法提取坐标，跳过")
+        return
+    coords_tensor = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0)
+
+    config = {
+        'model': {
+            'hidden_dim': 256,
+            'gcnii_layers': 6,
+            'alpha': 0.5,
+            'beta': 1.3,
+            'dropout': 0.1,
+            'pos_weight': 10.0,
+        },
+        'graph': {
+            'hydrogen_bond_threshold': 6.0,
+            'hydrophobic_threshold': 8.0,
+            'salt_bridge_threshold': 12.0,
+        }
+    }
+
+    print(f"  蛋白质: {key}")
+    print(f"  残基数: {n}")
+
+    model = create_vorrel_net(config)
+    model.eval()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    print(f"  设备: {device}")
+
+    concatenated = np.concatenate([esm2, pssm, dssp, atomic], axis=1)
+    concat_tensor = torch.tensor(concatenated, dtype=torch.float32).to(device)
+
+    with torch.no_grad():
+        h_initial = model.mvfem.embedding_layer(concat_tensor)
+        if h_initial.dim() == 2:
+            h_initial = h_initial.unsqueeze(0)
+
+        residue_types = list(sequence)[:n] if sequence else ['ALA'] * n
+        raw_edges, processed_edges = model.vmgcm(
+            residue_coords=coords_tensor.to(device),
+            residue_types=residue_types,
+            sequence=sequence[:n] if sequence else None
+        )
+
+        predictions = model.arfem(
+            h_initial=h_initial,
+            edge_features_dict=(raw_edges, processed_edges),
+            return_features=False
+        )
+
+    print(f"  输出形状: {predictions.shape}")
+    print(f"  预测范围: [{predictions.min().item():.4f}, {predictions.max().item():.4f}]")
+
+    info_path = '/home/shihj/shj/GraphPRNet/data/scPDB/info.txt'
+    binding_str = ''
+    with open(info_path) as f:
+        for line in f:
+            if line.startswith(f'{pdb_id}\t{key.split("_")[2]}\t{chain_id}\t'):
+                binding_str = line.strip().split('\t')[4]
+                break
+
+    binding_labels = np.zeros(n, dtype=np.float32)
+    for i, ch in enumerate(binding_str[:n]):
+        if ch == '1':
+            binding_labels[i] = 1.0
+
+    targets = torch.tensor(binding_labels, dtype=torch.float32).unsqueeze(0).to(device)
+    loss = model.compute_loss(predictions, targets)
+
+    print(f"  Loss: {loss.item():.4f}")
+    print(f"  Step 6 通过 ✓")
+
 
 def main():
+    print("╔══════════════════════════════════════════════════════════╗")
+    print("║        VorRel 端到端 Pipeline 测试                       ║")
+    print("╚══════════════════════════════════════════════════════════╝")
 
-    with open(Dataset_path + 'test_data_more.pkl','rb') as f:
-        Test = pickle.load(f)
+    key = test_step1_load_features()
+    if key is None:
+        print("\nStep 1 失败，终止测试")
+        return
 
-    print('Evaluate GraphPLBS on testset')
-    test_one_dataset(Test)
+    h_initial, graph = test_step2_embedding(key)
 
-if __name__ == "__main__":
+    raw_edges, processed_edges = test_step3_graph_construction(key)
+
+    predictions = test_step4_arfem(h_initial, raw_edges, processed_edges)
+
+    pssm, esm2, dssp, atomic, _ = load_precomputed_features(key)
+    info_path = '/home/shihj/shj/GraphPRNet/data/scPDB/info.txt'
+    pdb_id, chain_id, struct_num = key.split('_')
+    binding_str = ''
+    with open(info_path) as f:
+        for line in f:
+            if line.startswith(f'{pdb_id}\t{struct_num}\t{chain_id}\t'):
+                binding_str = line.strip().split('\t')[4]
+                break
+
+    n = pssm.shape[0]
+    binding_labels = np.zeros(n, dtype=np.float32)
+    for i, ch in enumerate(binding_str[:n]):
+        if ch == '1':
+            binding_labels[i] = 1.0
+
+    test_step5_loss(predictions, binding_labels)
+
+    test_step6_full_pipeline(key)
+
+    print("\n" + "=" * 60)
+    print("  所有测试通过! ✓")
+    print("=" * 60)
+
+
+if __name__ == '__main__':
     main()
-
-'''
-{
-    '1izh_1': 
-    [
-        'PQITLWQRPLVTIKIGGQLKEALLDTGADDTVLEEMNLPGRWKPKMIGGIGGFIKVRQYDQILIEICGHKAIGTVLVGPTPVNIIGRNLLTQIGCTLNFPQITLWQRPLVTIKIGGQLKEALLDTGADDTVLEEMNLPGRWKPKMIGGIGGFIKVRQYDQILIEICGHKAIGTVLVGPTPVNIIGRNLLTQIGCTLNF', 
-        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ]
-}
-'''
