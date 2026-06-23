@@ -33,7 +33,7 @@ scPDB dataset can be downloaded from http://bioinfo-pharma.u-strasbg.fr/scPDB/.
 HOLO4k and Coach420 dataset can be downloaded from https://github.com/rdk/p2rank-datasets.
 </p>
 
-## Train and Test
+## Train and Evaluate
 
 ### Train
 ```markdown
