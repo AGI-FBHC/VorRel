@@ -29,7 +29,7 @@ We selected 6 as the number of stacked GCNII layers in VorRel-Net. After using g
 
 ## Datasets
 <p align="justify">
-scPDB dataset can be downloaded from http://bioinfo-pharma.u-strasbg.fr/scPDB/.
+scPDB dataset can be downloaded from http://bioinfo-pharma.u-strasbg.fr/scPDB/.  
 HOLO4k and Coach420 dataset can be downloaded from https://github.com/rdk/p2rank-datasets.
 </p>
 
