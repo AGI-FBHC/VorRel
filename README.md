@@ -27,6 +27,12 @@ scipy                     1.7.0
 We selected 6 as the number of stacked GCNII layers in VorRel-Net. After using grid search for the initial residual connection and identity mapping, α was set to 0.5, β was set to 1.3, the learning rate was 0.001, and the Adam (Adaptive Momentum) algorithm was chosen as the optimizer. To avoid overfitting, the Dropout rate was set to 0.1. The software environment includes Ubuntu 22.04, Python 3.8, Torch 2.0, and CUDA 11.8. The hardware environment includes an Intel i7 CPU (8 cores, 3.0 GHz), 96 GB of RAM, and an RTX 3090 GPU equipped with 24 GB of memory.
 </p>
 
+## Datasets
+<p align="justify">
+scPDB dataset can be downloaded from http://bioinfo-pharma.u-strasbg.fr/scPDB/.
+HOLO4k and Coach420 dataset can be downloaded from https://github.com/rdk/p2rank-datasets.
+</p>
+
 ## Train and Test
 
 ### Train
@@ -36,8 +42,7 @@ python train.py \--output_dir checkpoints/full_train
 
 ### Evaluate
 ```markdown
-python evaluate.py \--model_path /path/to/trained_model.pth \--config configs/default.yaml \
-    --output evaluation_results.txt
+python evaluate.py \--model_path /path/to/trained_model.pth \--config configs/default.yaml \--output evaluation_results.txt
 ```
 ```markdown
 python evaluate_vorrel.py \--eval_mode kfold \--kfold 10 \--epochs 100 \--batch_size 4 --use_focal_loss --num_workers 4 \--group_by sequence \--output_dir evaluation_results
