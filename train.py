@@ -16,7 +16,6 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from models.vmgcm import VMGCM
 from models.arfem import ARFEM
 from models.vorrel_net import WeightedBinaryCrossEntropyLoss
 
@@ -187,8 +186,6 @@ class VorRelTrainer(nn.Module):
             nn.Linear(hidden_dim * 4, hidden_dim),
         )
 
-        self.vmgcm = VMGCM(config)
-
         self.arfem = ARFEM(config)
 
         pos_weight = config.get('model', {}).get('pos_weight', 10.0)
@@ -214,14 +211,9 @@ class VorRelTrainer(nn.Module):
             'salt_bridge': sb.to(device),
         }
 
-        processed_edges = {}
-        for edge_type, adj in raw_edges.items():
-            adj_unsqueezed = adj.unsqueeze(-1)
-            processed_edges[edge_type] = self.vmgcm.edge_type_embeddings[edge_type](adj_unsqueezed)
-
         return self.arfem(
             h_initial=h,
-            edge_features_dict=(raw_edges, processed_edges),
+            edge_features_dict=(raw_edges, None),
             return_features=False,
             return_edge_attn=return_edge_attn,
         )
