@@ -65,20 +65,45 @@ class HeterogeneousEdgeAttention(nn.Module):
 
     def __init__(self, hidden_dim):
         super().__init__()
+        # 边类型权重（可学习）
         self.edge_weights = nn.Parameter(torch.ones(len(self.EDGE_TYPES)) / len(self.EDGE_TYPES))
+        
+        # 节点通信投影层（根据连接关系传递信息）
+        self.communication_proj = nn.ModuleDict({
+            edge_type: nn.Linear(hidden_dim, hidden_dim)
+            for edge_type in self.EDGE_TYPES
+        })
 
-    def forward(self, edge_features_dict):
+    def forward(self, h, raw_edges):
         weights = F.softmax(self.edge_weights, dim=0)
 
-        weighted_features = []
+        combined = None
         for i, edge_type in enumerate(self.EDGE_TYPES):
-            if edge_type in edge_features_dict:
-                weighted_features.append(weights[i] * edge_features_dict[edge_type])
+            if edge_type not in raw_edges:
+                continue
 
-        if weighted_features:
-            combined = torch.stack(weighted_features, dim=0).sum(dim=0)
-        else:
-            combined = torch.zeros_like(list(edge_features_dict.values())[0])
+            adj = raw_edges[edge_type]  # [B,N,N]
+            batch_size, num_nodes, _ = adj.shape
+
+            # 归一化邻接矩阵
+            adj_with_self = adj + torch.eye(num_nodes, device=adj.device).unsqueeze(0)
+            degree = adj_with_self.sum(dim=-1, keepdim=True).clamp(min=1)
+            d_inv_sqrt = degree.pow(-0.5)
+            adj_norm = d_inv_sqrt * adj_with_self * d_inv_sqrt.transpose(-2, -1)
+
+            # 节点间通信：通过邻接矩阵传递信息
+            h_comm = torch.matmul(adj_norm, h)  # [B,N,D]
+
+            # 通信后变换
+            h_comm = self.communication_proj[edge_type](h_comm)
+
+            # 加权融合
+            contribution = weights[i] * h_comm
+
+            if combined is None:
+                combined = contribution
+            else:
+                combined = combined + contribution
 
         return combined
 
@@ -138,16 +163,15 @@ class ARFEM(nn.Module):
 
         self.channel_attention = ChannelAttention(self.hidden_dim)
 
+        # 修改：HEA直接使用邻接矩阵进行节点通信
         self.heterogeneous_edge_attention = HeterogeneousEdgeAttention(self.hidden_dim)
 
         self.feedback_mechanism = FeedbackMechanism(self.hidden_dim)
 
         self.classifier = Classifier(self.hidden_dim, self.dropout)
 
-        self.edge_transforms = nn.ModuleDict({
-            edge_type: nn.Linear(64, self.hidden_dim)
-            for edge_type in ['voronoi', 'hydrogen_bond', 'hydrophobic', 'salt_bridge']
-        })
+        # 移除边特征变换层（不再需要）
+        # self.edge_transforms = ...
 
         self.edge_gate = nn.Parameter(torch.tensor(-2.0))
 
@@ -156,14 +180,17 @@ class ARFEM(nn.Module):
         h = h_initial
 
         raw_edges = None
-        processed_edges = None
         if edge_features_dict is not None:
-            raw_edges, processed_edges = edge_features_dict
+            if isinstance(edge_features_dict, tuple):
+                raw_edges, _ = edge_features_dict
+            else:
+                raw_edges = edge_features_dict
 
         stage_feats = {}
         if return_stage_features:
             stage_feats['input_embedding'] = h.detach()
 
+        # GCNII层（使用voronoi邻接矩阵）
         for layer in self.gcnii_layers:
             if raw_edges is not None and 'voronoi' in raw_edges:
                 adj = raw_edges['voronoi']
@@ -176,56 +203,20 @@ class ARFEM(nn.Module):
         if return_stage_features:
             stage_feats['after_gcnii'] = h.detach()
 
+        # 通道注意力
         h = self.channel_attention(h)
 
         if return_stage_features:
             stage_feats['after_channel_attn'] = h.detach()
 
+        # HEA：根据连接关系进行节点通信
         edge_aggregated = None
-        if processed_edges and raw_edges:
-            hea_weights = F.softmax(
-                self.heterogeneous_edge_attention.edge_weights, dim=0
-            )
+        if raw_edges is not None:
+            edge_aggregated = self.heterogeneous_edge_attention(h, raw_edges)
 
-            combined = None
-            edge_aggregated = {} if return_edge_attn else None
-
-            for i, edge_type in enumerate(self.heterogeneous_edge_attention.EDGE_TYPES):
-                if edge_type not in processed_edges or edge_type not in raw_edges:
-                    continue
-                if edge_type not in self.edge_transforms:
-                    continue
-
-                edge_feat = processed_edges[edge_type]
-                adj = raw_edges[edge_type]
-
-                adj_w = adj.unsqueeze(-1)
-                weighted_64 = edge_feat * adj_w
-                del edge_feat, adj_w
-
-                degree = adj.sum(dim=-1, keepdim=True).clamp(min=1)
-                agg_64 = weighted_64.sum(dim=2) / degree
-                del weighted_64, degree
-
-                agg = self.edge_transforms[edge_type](agg_64)
-                del agg_64
-
-                contribution = hea_weights[i] * agg
-
-                if combined is None:
-                    combined = contribution
-                else:
-                    combined = combined + contribution
-
-                if return_edge_attn:
-                    edge_aggregated[edge_type] = agg.detach()
-                else:
-                    del agg
-
-            if combined is not None:
+            if edge_aggregated is not None:
                 gate = torch.sigmoid(self.edge_gate)
-                h = h + gate * combined
-                del combined
+                h = h + gate * edge_aggregated
 
         logits = self.classifier(h).squeeze(-1)
         predictions = torch.sigmoid(logits)
@@ -234,10 +225,7 @@ class ARFEM(nn.Module):
         if return_features:
             outputs.append(h)
         if return_edge_attn:
-            hea_weights = F.softmax(
-                self.heterogeneous_edge_attention.edge_weights, dim=0
-            )
-            outputs.append(edge_aggregated)
+            hea_weights = F.softmax(self.heterogeneous_edge_attention.edge_weights, dim=0)
             outputs.append(hea_weights)
 
         if len(outputs) == 1:
