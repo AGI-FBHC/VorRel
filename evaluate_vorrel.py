@@ -174,7 +174,10 @@ def compute_metrics(preds, labels, threshold=0.5):
         'fn': int(fn),
         'tp': int(tp),
         'sensitivity': 0.0,
-        'specificity': 0.0
+        'specificity': 0.0,
+        'balanced_precision': 0.0,
+        'balanced_recall': 0.0,
+        'balanced_f1': 0.0
     }
     
     try:
@@ -199,6 +202,47 @@ def compute_metrics(preds, labels, threshold=0.5):
         metrics['specificity'] = tn / (tn + fp)
     
     return metrics
+
+
+def find_balanced_threshold(preds, labels, balance_tolerance=0.03):
+    """
+    寻找 Precision 和 Recall 平衡的阈值
+    在 Precision 和 Recall 差异小于 tolerance 的前提下，寻找 F1 值最高的阈值
+    """
+    best_threshold = 0.5
+    best_f1 = 0.0
+    best_metrics = None
+    
+    for threshold in np.arange(0.1, 0.95, 0.005):
+        pred_binary = (preds > threshold).astype(int)
+        
+        precision = precision_score(labels, pred_binary, zero_division=0)
+        recall = recall_score(labels, pred_binary, zero_division=0)
+        f1 = f1_score(labels, pred_binary, zero_division=0)
+        diff = abs(precision - recall)
+        
+        if diff < balance_tolerance and f1 > best_f1:
+            best_f1 = f1
+            best_threshold = threshold
+            best_metrics = {
+                'threshold': round(threshold, 3),
+                'precision': precision,
+                'recall': recall,
+                'f1': f1,
+                'diff': round(diff, 4)
+            }
+    
+    if best_metrics is None:
+        pred_binary = (preds > 0.5).astype(int)
+        best_metrics = {
+            'threshold': 0.5,
+            'precision': precision_score(labels, pred_binary, zero_division=0),
+            'recall': recall_score(labels, pred_binary, zero_division=0),
+            'f1': f1_score(labels, pred_binary, zero_division=0),
+            'diff': abs(best_metrics['precision'] - best_metrics['recall'])
+        }
+    
+    return best_threshold, best_metrics
 
 
 def evaluate_model(model, dataloader, device, threshold=0.5):
@@ -281,7 +325,14 @@ def train_one_fold(train_keys, val_keys, test_keys, args, fold_idx, log_dir):
     
     model = VorRelTrainer(config).to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    
+    warmup_epochs = 5
+    if args.epochs > warmup_epochs:
+        scheduler1 = optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=warmup_epochs)
+        scheduler2 = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs - warmup_epochs)
+        scheduler = optim.lr_scheduler.SequentialLR(optimizer, schedulers=[scheduler1, scheduler2], milestones=[warmup_epochs])
+    else:
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     
     param_info = count_parameters(model)
     flops = calculate_flops(model)
