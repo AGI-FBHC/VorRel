@@ -50,11 +50,6 @@ python evaluate_vorrel.py \--eval_mode kfold \--kfold 10 \--epochs 100 \--batch_
 
 ## Visual Results
 <div>
-<img src="doc/heatmap.svg" style="width: 100%; height: auto;" />
-<p align="justify">Figure 1: Perspective of multi-view and relational attention maps.</p>
-</div>
-
-<div>
 <img src="doc/training_metrics_100.svg" style="width: 100%; height: auto;" />
-<p align="justify">Figure 2: Convergence curves of the model during the training process. (a) Training Loss, (b) Validation Loss, (c) Validation F1-score, (d) Matthews correlation coefficient (MCC).</p>
+<p align="justify">Figure 1: Convergence curves of the model during the training process. (a) Training Loss, (b) Validation Loss, (c) Validation F1-score, (d) Matthews correlation coefficient (MCC).</p>
 </div>
